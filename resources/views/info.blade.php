@@ -6,10 +6,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="{{url('layui/css/layui.css')}}">
         <link rel="stylesheet" href="{{url('message/message.css')}}">
+        <link rel="stylesheet" href="http://apps.bdimg.com/libs/bootstrap/3.3.4/css/bootstrap.min.css">
         <script src="{{url('layui/layui.js')}}"></script>
-
         <title>查看信息</title>
-
+        <style>
+            .export {
+                margin-top: 15px;
+                margin-bottom: 100px;
+                float: left;
+            }
+            .page {
+                float: right;
+            }
+        </style>
     </head>
     <body>
     <div class="layui-container" style="margin-top: 200px">
@@ -25,9 +34,9 @@
             </colgroup>
             <thead>
             <tr>
-                <th>昵称</th>
-                <th>加入时间</th>
-                <th>签名</th>
+                <th>编号</th>
+                <th>人数</th>
+                <th>时间</th>
             </tr>
             </thead>
             <tbody>
@@ -40,6 +49,15 @@
             @endforeach
             </tbody>
         </table>
+        <div class="export">
+            <form action="/info/export" method="post">
+                @csrf
+            <button type="submit" class="layui-btn layui-btn-default">导出当前日期记录</button>
+            </form>
+        </div>
+        <div class="page">
+            {{$infos->links()}}
+        </div>
     </div>
     </body>
     <script>

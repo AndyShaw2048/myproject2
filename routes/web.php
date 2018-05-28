@@ -25,3 +25,4 @@ Route::post('login','InfoController@login');
 Route::get('logout','InfoController@logout');
 
 Route::get('info/{date?}','InfoController@info');
+Route::post('info/export','InfoController@export');

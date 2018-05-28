@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Info;
 use Illuminate\Http\Request;
 use App\Password;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class InfoController extends Controller
 {
@@ -48,6 +50,10 @@ class InfoController extends Controller
 
     public function index()
     {
+        if(session()->exists('isLogin'))
+        {
+            return redirect('info');
+        }
         return view('login');
     }
 
@@ -71,10 +77,14 @@ class InfoController extends Controller
         }
         if($date)
         {
-            $infos = Info::where('date',$date)->get();
+            session()->put('date',$date);
+            session()->save();
+            $infos = Info::where('date',$date)->paginate(10);
             return view('info',['infos'=>$infos]);
         }
-        $infos = Info::where('date',date('Y-m-d',time()))->get();
+        session()->put('date',date("Y-m-d",time()));
+        session()->save();
+        $infos = Info::where('date',date('Y-m-d',time()))->paginate(10);
         return view('info',['infos'=>$infos]);
     }
     
@@ -83,5 +93,32 @@ class InfoController extends Controller
         session()->forget('isLogin');
         session()->save();
         return redirect('login');
+    }
+
+    public function export()
+    {
+        try
+        {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setCellValue('A1', '编号');
+            $sheet->setCellValue('B1', '人数');
+            $sheet->setCellValue('C1', '日期');
+            $infos = Info::where('date',session('date'))->get();
+            foreach($infos as $i => $info)
+            {
+                $sheet->setCellValue('A'.($i+2), $info->bianhao);
+                $sheet->setCellValue('B'.($i+2), $info->renshu);
+                $sheet->setCellValue('C'.($i+2), $info->date);
+            }
+            $writer = new Xlsx($spreadsheet);
+            $filename = 'export/'.md5(time()).'.xlsx';
+            $writer->save($filename);
+        }
+        catch(\Exception $e)
+        {
+            return '导出失败';
+        }
+        return redirect(url($filename));
     }
 }
