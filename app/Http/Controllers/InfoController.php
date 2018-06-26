@@ -5,17 +5,18 @@ namespace App\Http\Controllers;
 use App\Info;
 use Illuminate\Http\Request;
 use App\Password;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class InfoController extends Controller
 {
-    public function store($bianhao = null,$renshu = null)
+    public function store($bianhao = null,$renshu = null,$name = null,$amount = null)
     {
-        if(!($bianhao && $renshu))
+        if(!($bianhao && $renshu && $name && $amount))
             return '参数不可为空';
         $current = date('Y-m-d',time());
-
+        $type = substr($bianhao,0,1);
         $info = Info::where('bianhao',$bianhao)
                     ->where('date',$current)->get();
         if(!$info->isEmpty())
@@ -38,6 +39,9 @@ class InfoController extends Controller
             $i  = new Info();
             $i->bianhao = $bianhao;
             $i->renshu = $renshu;
+            $i->name = $name;
+            $i->amount = $amount;
+            $i->type = $type;
             $i->date = $current;
             $i->save();
         }catch(\Exception $e)
@@ -63,35 +67,37 @@ class InfoController extends Controller
         if(!$pwd->isEmpty())
         {
             session()->put('isLogin','1');
+            session()->put('type','');
+            session()->put('name','');
+            session()->put('startDate',date('Y-m-d',time()));
+            session()->put('endDate',date('Y-m-d',time()));
             session()->save();
             return redirect('info');
         }
         return redirect()->back()->withErrors(['msg'=>'密码错误']);
     }
     
-    public function info($date = null)
+    public function info()
     {
+        $array = array();
+        if(session('type')!='')
+            $array['type'] = session('type');
+        if(session('name')!='')
+            $array['name'] = session('name');
         if(!session()->exists('isLogin'))
         {
             return redirect('login');
         }
-        if($date)
-        {
-            session()->put('date',$date);
-            session()->save();
-            $infos = Info::where('date',$date)->paginate(10);
-            return view('info',['infos'=>$infos]);
-        }
-        session()->put('date',date("Y-m-d",time()));
-        session()->save();
-        $infos = Info::where('date',date('Y-m-d',time()))->paginate(10);
+
+        $infos = Info::where('date','>=',session('startDate'))
+                      ->where('date','<=',session('endDate'))
+                      ->where($array)->paginate(10);
         return view('info',['infos'=>$infos]);
     }
     
     public function logout()
     {
-        session()->forget('isLogin');
-        session()->save();
+        session()->flush();
         return redirect('login');
     }
 
@@ -120,5 +126,21 @@ class InfoController extends Controller
             return '导出失败';
         }
         return redirect(url($filename));
+    }
+
+    /**
+     * ajax 设置筛选条件
+     * @param Request $request
+     */
+    public function setCondition(Request $request)
+    {
+        session()->put('type',$request->type);
+        session()->put('name',$request->name);
+        session()->put('startDate',$request->startDate);
+        session()->put('endDate',$request->endDate);
+        session()->save();
+        return response()->json(array(
+            'code' => 200
+                                ));
     }
 }

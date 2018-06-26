@@ -16,13 +16,15 @@ Route::get('/', function () {
 });
 
 
-Route::get('bianhao/{bianhao}/renshu/{renshu}','InfoController@store')
+Route::get('bianhao/{bianhao}/renshu/{renshu}/qunmingchen/{name}/qunrenshu/{amount}','InfoController@store')
      ->where('bianhao','[A-Za-z0-9]+')
-     ->where('renshu','[0-9]+');
+     ->where('renshu','[0-9]+')
+     ->where('amount','[0-9]+');
 
 Route::get('login','InfoController@index');
 Route::post('login','InfoController@login');
 Route::get('logout','InfoController@logout');
 
-Route::get('info/{date?}','InfoController@info');
+Route::get('info','InfoController@info');
 Route::post('info/export','InfoController@export');
+Route::post('info/set','InfoController@setCondition');
