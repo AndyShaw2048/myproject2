@@ -118,6 +118,7 @@
         <div class="am-modal-dialog">
             <div class="am-modal-bd" id="amount-text">
                 当前条件下，编号人数：<span id="b_number"></span>，群组人数：<span id="g_number"></span>
+                <br>总人数：<span id="total_number"></span>
             </div>
             <div class="am-modal-footer">
                 <span class="am-modal-btn">确定</span>
@@ -256,6 +257,7 @@
                         window.setTimeout("$('#my-modal-loading').modal('close')",1000);
                         $('#b_number').text(data.b_number);
                         $('#g_number').text(data.g_number);
+                        $('#total_number').text(data.g_number+data.b_number);
                         window.setTimeout("$('#my-alert-amount').modal()",1000);
                     }
                     else{
