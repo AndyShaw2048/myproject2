@@ -98,48 +98,7 @@ class InfoController extends Controller
         }
 
         //构造批量查询sql语句
-        $sql = null;
-        if(session('type')!='')
-        {
-            $array = explode(',',session('type'));
-            foreach($array as $i => $item)
-            {
-                if(strlen($item)==1)
-                {
-                    if($i == 0)
-                        $sql = '( type = \''.$item.'\' ';
-                    else
-                        $sql = $sql.' or type = \''.$item.'\' ';
-                }
-                else
-                {
-                    if($i == 0)
-                        $sql = '( bianhao = \''.$item.'\' ';
-                    else
-                        $sql = $sql.' or bianhao = \''.$item.'\' ';
-                }
-
-            }
-            $sql = $sql.')';
-        }
-        if(session('number')!='')
-        {
-            $array = explode(',',session('number'));
-            foreach($array as $i => $item)
-            {
-                if(is_null($sql))
-                    $sql = '( number = \''.$item.'\' ';
-                elseif($i == 0)
-                    $sql = $sql.' and ( number = \''.$item.'\' ';
-                else
-                    $sql = $sql.' or number = \''.$item.'\' ';
-            }
-            $sql = $sql.' )';
-        }
-        if(is_null($sql))
-            $sql = ' (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
-        else
-            $sql = $sql.' and (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+        $sql = $this->getSql();
 
         $infos = null;
         $startDate = session('startDate');
@@ -170,48 +129,7 @@ class InfoController extends Controller
     {
         try
         {
-            $sql = null;
-            if(session('type')!='')
-            {
-                $array = explode(',',session('type'));
-                foreach($array as $i => $item)
-                {
-                    if(strlen($item)==1)
-                    {
-                        if($i == 0)
-                            $sql = '( type = \''.$item.'\' ';
-                        else
-                            $sql = $sql.' or type = \''.$item.'\' ';
-                    }
-                    else
-                    {
-                        if($i == 0)
-                            $sql = '( bianhao = \''.$item.'\' ';
-                        else
-                            $sql = $sql.' or bianhao = \''.$item.'\' ';
-                    }
-
-                }
-                $sql = $sql.')';
-            }
-            if(session('number')!='')
-            {
-                $array = explode(',',session('number'));
-                foreach($array as $i => $item)
-                {
-                    if(is_null($sql))
-                        $sql = '( number = \''.$item.'\' ';
-                    elseif($i == 0)
-                        $sql = $sql.' and ( number = \''.$item.'\' ';
-                    else
-                        $sql = $sql.' or number = \''.$item.'\' ';
-                }
-                $sql = $sql.' )';
-            }
-            if(is_null($sql))
-                $sql = ' (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
-            else
-                $sql = $sql.' and (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+            $sql = $this->getSql();
             $infos = $infos = DB::table('info')->whereRaw($sql)->orderBy('type')->get();
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
@@ -267,14 +185,9 @@ class InfoController extends Controller
     public function getAmount()
     {
         $this->amount = 0;
-        $array = array();
-        if(session('type')!='')
-            $array['type'] = session('type');
-        if(session('number')!='')
-            $array['number'] = session('number');
-        Info::where('date','>=',session('startDate'))
-            ->where('date','<=',session('endDate'))
-            ->where($array)->chunk(500,function($infos){
+        $sql = $this->getSql();
+
+        DB::table('info')->whereRaw($sql)->orderBy('type')->chunk(500,function($infos){
                 foreach($infos as $info)
                 {
                     $this->b_number = $this->b_number + $info->renshu;
@@ -286,5 +199,56 @@ class InfoController extends Controller
                                     'b_number' => $this->b_number,
                                     'g_number' => $this->g_number
                                 ));
+    }
+
+    /**
+     * 构建sql语句
+     */
+    public function getSql()
+    {
+        $sql = null;
+        if(session('type')!='')
+        {
+            $array = explode(',',session('type'));
+            foreach($array as $i => $item)
+            {
+                if(strlen($item)==1)
+                {
+                    if($i == 0)
+                        $sql = '( type = \''.$item.'\' ';
+                    else
+                        $sql = $sql.' or type = \''.$item.'\' ';
+                }
+                else
+                {
+                    if($i == 0)
+                        $sql = '( bianhao = \''.$item.'\' ';
+                    else
+                        $sql = $sql.' or bianhao = \''.$item.'\' ';
+                }
+
+            }
+            $sql = $sql.')';
+        }
+        if(session('number')!='')
+        {
+            $array = explode(',',session('number'));
+            foreach($array as $i => $item)
+            {
+                if(is_null($sql))
+                    $sql = '( number = \''.$item.'\' ';
+                elseif($i == 0)
+                    $sql = $sql.' and ( number = \''.$item.'\' ';
+                else
+                    $sql = $sql.' or number = \''.$item.'\' ';
+            }
+            $sql = $sql.' )';
+        }
+        if(is_null($sql))
+            $sql = ' (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+        else
+            $sql = $sql.' and (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+
+        return $sql;
     }
 }

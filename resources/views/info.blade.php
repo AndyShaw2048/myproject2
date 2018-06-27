@@ -269,6 +269,7 @@
                     }
                 },
                 error: function(xhr, type){
+                    window.setTimeout("$('#my-modal-loading').modal('close')",1000);
                     alert('Ajax error!')
                 }
             });
