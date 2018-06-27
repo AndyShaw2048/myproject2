@@ -38,9 +38,9 @@
                 </div>
                 <br>
                 <div class="layui-inline">
-                    <label class="layui-form-label">群名称</label>
+                    <label class="layui-form-label">群编号</label>
                     <div class="layui-input-inline" style="margin-left: 18px">
-                        <input type="text" id="name" placeholder="请输入 群名称" class="layui-input" value="{{session('name')=='' ? '':session('name')}}">
+                        <input type="text" id="name" placeholder="请输入 群编号(纯数字)" class="layui-input" value="{{session('number')=='' ? '':session('number')}}">
                     </div>
                 </div>
             </div>
@@ -117,7 +117,7 @@
     <div class="am-modal am-modal-alert" tabindex="-1" id="my-alert-amount">
         <div class="am-modal-dialog">
             <div class="am-modal-bd" id="amount-text">
-                Hello world！
+                当前条件下，编号人数：<span id="b_number"></span>，群组人数：<span id="g_number"></span>
             </div>
             <div class="am-modal-footer">
                 <span class="am-modal-btn">确定</span>
@@ -197,7 +197,7 @@
             $.ajax({
                 type: 'POST',
                 url: '/info/set',
-                data: {type:type,name:name,startDate:startDate,endDate:endDate},
+                data: {type:type,number:name,startDate:startDate,endDate:endDate},
                 dataType: 'json',
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
@@ -254,7 +254,8 @@
                 success: function(data){
                     if (data.code == 200){
                         window.setTimeout("$('#my-modal-loading').modal('close')",1000);
-                        $('#amount-text').text('当前总人数为：'+data.amount);
+                        $('#b_number').text(data.b_number);
+                        $('#g_number').text(data.g_number);
                         window.setTimeout("$('#my-alert-amount').modal()",1000);
                     }
                     else{

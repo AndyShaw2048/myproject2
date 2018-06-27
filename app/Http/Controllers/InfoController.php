@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Info;
 use Illuminate\Http\Request;
 use App\Password;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -24,6 +25,7 @@ class InfoController extends Controller
         if(!($bianhao && $renshu && $name && $amount))
             return '参数不可为空';
         $current = date('Y-m-d',time());
+        preg_match("/\d+/",$name,$number);
         $type = substr($bianhao,0,1);
         $info = Info::where('bianhao',$bianhao)
                     ->where('date',$current)->get();
@@ -34,11 +36,13 @@ class InfoController extends Controller
                 Info::where('bianhao',$bianhao)
                     ->where('date',$current)
                     ->update([
-                                 'renshu' => $renshu
+                                 'renshu' => $renshu,
+                                 'name' => $name,
+                                 'amount' => $amount
                              ]);
             } catch(\Exception $e)
             {
-                return 'fail';
+                return 'fail-1';
             }
             return 'success';
         }
@@ -49,12 +53,13 @@ class InfoController extends Controller
             $i->renshu = $renshu;
             $i->name = $name;
             $i->amount = $amount;
+            $i->number = isset($number[0]) ? $number[0] : '0' ;
             $i->type = $type;
             $i->date = $current;
             $i->save();
         }catch(\Exception $e)
         {
-            return 'fail';
+            return 'fail-2'.$e->getMessage();
         }
         return 'success';
 
@@ -87,33 +92,58 @@ class InfoController extends Controller
     
     public function info()
     {
-        $array = array();
-        if(session('type')!='')
-            $array['type'] = session('type');
-        if(session('name')!='')
-            $array['name'] = session('name');
         if(!session()->exists('isLogin'))
         {
             return redirect('login');
         }
+
+        //构造批量查询sql语句
+        $sql = null;
+        if(session('type')!='')
+        {
+            $array = explode(',',session('type'));
+            foreach($array as $i => $item)
+            {
+                if($i == 0)
+                    $sql = '( type = \''.$item.'\' ';
+                else
+                    $sql = $sql.' or type = \''.$item.'\' ';
+            }
+            $sql = $sql.')';
+        }
+        if(session('number')!='')
+        {
+            $array = explode(',',session('number'));
+            foreach($array as $i => $item)
+            {
+                if(is_null($sql))
+                    $sql = '( number = \''.$item.'\' ';
+                elseif($i == 0)
+                    $sql = $sql.' and ( number = \''.$item.'\' ';
+                else
+                    $sql = $sql.' or number = \''.$item.'\' ';
+            }
+            $sql = $sql.' )';
+        }
+        if(is_null($sql))
+            $sql = ' (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+        else
+            $sql = $sql.' and (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+
         $infos = null;
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         Redis::flushall();
         for(;$startDate < $endDate;)
         {
-            $infos = Info::where('date',$startDate)
-                            ->where($array)->paginate(10);
+            $infos = DB::table('info')->whereRaw($sql)->orderBy('type')->paginate(10);
             foreach($infos as $i => $info)
             {
                 Redis::set($info->bianhao.':'.$info->date,$info->renshu);
             }
             $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
         }
-
-        $infos = Info::where('date','>=',session('startDate'))
-                     ->where('date','<=',session('endDate'))
-                     ->where($array)->paginate(10);
+        $infos = $infos = DB::table('info')->whereRaw($sql)->orderBy('type')->paginate(10);
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         return view('info',['infos'=>$infos,'startDate'=>$startDate,'endDate'=>$endDate]);
@@ -129,14 +159,38 @@ class InfoController extends Controller
     {
         try
         {
-            $array = array();
+            $sql = null;
             if(session('type')!='')
-                $array['type'] = session('type');
-            if(session('name')!='')
-                $array['name'] = session('name');
-            $infos = Info::where('date','>=',session('startDate'))
-                         ->where('date','<=',session('endDate'))
-                         ->where($array)->get();
+            {
+                $array = explode(',',session('type'));
+                foreach($array as $i => $item)
+                {
+                    if($i == 0)
+                        $sql = '( type = \''.$item.'\' ';
+                    else
+                        $sql = $sql.' or type = \''.$item.'\' ';
+                }
+                $sql = $sql.')';
+            }
+            if(session('number')!='')
+            {
+                $array = explode(',',session('number'));
+                foreach($array as $i => $item)
+                {
+                    if(is_null($sql))
+                        $sql = '( number = \''.$item.'\' ';
+                    elseif($i == 0)
+                        $sql = $sql.' and ( number = \''.$item.'\' ';
+                    else
+                        $sql = $sql.' or number = \''.$item.'\' ';
+                }
+                $sql = $sql.' )';
+            }
+            if(is_null($sql))
+                $sql = ' (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+            else
+                $sql = $sql.' and (date >= \''.session('startDate').'\' and date <= \''.session('endDate').'\')';
+            $infos = $infos = DB::table('info')->whereRaw($sql)->orderBy('type')->get();
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setCellValue('A1', '编号');
@@ -149,7 +203,7 @@ class InfoController extends Controller
             {
                 $sheet->setCellValue('A'.($i+2), $info->bianhao);
                 $sheet->setCellValue('B'.($i+2), $info->renshu);
-                $sheet->setCellValue('C'.($i+2), $info->name);
+                $sheet->setCellValue('C'.($i+2), $info->number);
                 $sheet->setCellValue('D'.($i+2), $info->amount);
                 $sheet->setCellValue('E'.($i+2), $info->date);
             }
@@ -171,7 +225,7 @@ class InfoController extends Controller
     public function setCondition(Request $request)
     {
         session()->put('type',$request->type);
-        session()->put('name',$request->name);
+        session()->put('number',$request->number);
         session()->put('startDate',$request->startDate);
         session()->put('endDate',$request->endDate);
         session()->save();
@@ -186,26 +240,29 @@ class InfoController extends Controller
      * 计算当前条件下的总人数
      * @var int
      */
-    protected $amount = 0;
+    protected $b_number = 0;
+    protected $g_number = 0;
     public function getAmount()
     {
         $this->amount = 0;
         $array = array();
         if(session('type')!='')
             $array['type'] = session('type');
-        if(session('name')!='')
-            $array['name'] = session('name');
+        if(session('number')!='')
+            $array['number'] = session('number');
         Info::where('date','>=',session('startDate'))
             ->where('date','<=',session('endDate'))
             ->where($array)->chunk(500,function($infos){
                 foreach($infos as $info)
                 {
-                    $this->amount = $this->amount + $info->renshu;
+                    $this->b_number = $this->b_number + $info->renshu;
+                    $this->g_number = $this->g_number + $info->amount;
                 }
             });
         return response()->json(array(
                                     'code' => 200,
-                                    'amount' => $this->amount
+                                    'b_number' => $this->b_number,
+                                    'g_number' => $this->g_number
                                 ));
     }
 }
