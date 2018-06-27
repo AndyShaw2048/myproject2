@@ -62,6 +62,7 @@
                 <thead>
                 <tr>
                     <th>编号</th>
+                    <th>群名称</th>
                     @while($startDate != $endDate)
                         <th>人数({{$startDate}})</th>
                         {{--<th>时间({{$startDate}})</th>--}}
@@ -71,10 +72,17 @@
                 </thead>
                 <tbody>
                 @foreach($infos as $info)
+                    <?php
+                    $startDate = session('startDate');
+                    $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+                    ?>
                     <tr>
                         <td>{{$info->bianhao}}</td>
-                        <td>{{$info->renshu}}</td>
-                        <td>{{$info->date}}</td>
+                        <td>{{$info->name}}</td>
+                        @for(;$startDate < $endDate;)
+                            <td>{{\Illuminate\Support\Facades\Redis::get($info->bianhao.':'.$startDate)}}</td>
+                            <?php $startDate = date("Y-m-d",strtotime($startDate." +1 day"));?>
+                        @endfor
                     </tr>
                 @endforeach
                 </tbody>

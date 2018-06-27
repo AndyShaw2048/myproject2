@@ -96,25 +96,24 @@ class InfoController extends Controller
         {
             return redirect('login');
         }
+        $infos = null;
+        $startDate = session('startDate');
+        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+        Redis::flushall();
+        for(;$startDate < $endDate;)
+        {
+            $infos = Info::where('date',$startDate)
+                            ->where($array)->paginate(10);
+            foreach($infos as $i => $info)
+            {
+                Redis::set($info->bianhao.':'.$info->date,$info->renshu);
+            }
+            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+        }
+
         $infos = Info::where('date','>=',session('startDate'))
-                      ->where('date','<=',session('endDate'))
-                      ->where($array)->paginate(10);
-
-//        $startDate = session('startDate');
-//        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
-//        Redis::flushall();
-//        while($startDate != $endDate)
-//        {
-//            $infos = Info::where('date','>=',session('startDate'))
-//                            ->where('date','<=',session('endDate'))
-//                            ->where($array)->paginate(10);
-//            foreach($infos as $i => $info)
-//            {
-//                Redis::set($info->bianhao.'.'.$info->date,$info->renshu);
-//            }
-//            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
-//        }
-
+                     ->where('date','<=',session('endDate'))
+                     ->where($array)->paginate(10);
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         return view('info',['infos'=>$infos,'startDate'=>$startDate,'endDate'=>$endDate]);
