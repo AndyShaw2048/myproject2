@@ -180,4 +180,32 @@ class InfoController extends Controller
             'code' => 200
                                 ));
     }
+
+
+    /**
+     * 计算当前条件下的总人数
+     * @var int
+     */
+    protected $amount = 0;
+    public function getAmount()
+    {
+        $this->amount = 0;
+        $array = array();
+        if(session('type')!='')
+            $array['type'] = session('type');
+        if(session('name')!='')
+            $array['name'] = session('name');
+        Info::where('date','>=',session('startDate'))
+            ->where('date','<=',session('endDate'))
+            ->where($array)->chunk(500,function($infos){
+                foreach($infos as $info)
+                {
+                    $this->amount = $this->amount + $info->renshu;
+                }
+            });
+        return response()->json(array(
+                                    'code' => 200,
+                                    'amount' => $this->amount
+                                ));
+    }
 }

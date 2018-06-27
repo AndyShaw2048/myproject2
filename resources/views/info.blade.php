@@ -56,6 +56,8 @@
             </div>
         </div>
         <button class="am-btn am-btn-primary" style="margin-left: 10px" onclick="sendPost()">提交</button>
+        <a href="/logout" class="am-btn am-btn-primary" style="margin-left: 10px">退出</a>
+        <button class="am-btn am-btn-default" style="margin-left: 10px" onclick="getAmount()">计算当前总人数</button>
 
         <div class="am-scrollable-horizontal" style="margin-top: 20px">
             <table class="am-table am-table-bordered am-table-striped am-table-hover am-text-nowrap">
@@ -100,6 +102,26 @@
         </div>
         <div class="page">
             {{$infos->links()}}
+        </div>
+    </div>
+
+    <div class="am-modal am-modal-loading am-modal-no-btn" tabindex="-1" id="my-modal-loading">
+        <div class="am-modal-dialog">
+            <div class="am-modal-hd">正在载入...</div>
+            <div class="am-modal-bd">
+                <span class="am-icon-spinner am-icon-spin"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="am-modal am-modal-alert" tabindex="-1" id="my-alert-amount">
+        <div class="am-modal-dialog">
+            <div class="am-modal-bd" id="amount-text">
+                Hello world！
+            </div>
+            <div class="am-modal-footer">
+                <span class="am-modal-btn">确定</span>
+            </div>
         </div>
     </div>
     </body>
@@ -216,6 +238,36 @@
 
             var cha=((Date.parse(OneMonth+'/'+OneDay+'/'+OneYear)- Date.parse(TwoMonth+'/'+TwoDay+'/'+TwoYear))/86400000);
             return Math.abs(cha);
+        }
+
+        function getAmount()
+        {
+            $('#my-modal-loading').modal();
+            $.ajax({
+                type: 'POST',
+                url: '/info/amount',
+                data: {},
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
+                },
+                success: function(data){
+                    if (data.code == 200){
+                        window.setTimeout("$('#my-modal-loading').modal('close')",1000);
+                        $('#amount-text').text('当前总人数为：'+data.amount);
+                        window.setTimeout("$('#my-alert-amount').modal()",1000);
+                    }
+                    else{
+                        $.message({
+                            message: '提交失败',
+                            type: 'error'
+                        });
+                    }
+                },
+                error: function(xhr, type){
+                    alert('Ajax error!')
+                }
+            });
         }
     </script>
 </html>
