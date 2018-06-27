@@ -5,12 +5,20 @@ namespace App\Http\Controllers;
 use App\Info;
 use Illuminate\Http\Request;
 use App\Password;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class InfoController extends Controller
 {
+    /**
+     * 参数保存
+     * @param null $bianhao
+     * @param null $renshu
+     * @param null $name
+     * @param null $amount
+     * @return string
+     */
     public function store($bianhao = null,$renshu = null,$name = null,$amount = null)
     {
         if(!($bianhao && $renshu && $name && $amount))
@@ -88,11 +96,28 @@ class InfoController extends Controller
         {
             return redirect('login');
         }
-
         $infos = Info::where('date','>=',session('startDate'))
                       ->where('date','<=',session('endDate'))
                       ->where($array)->paginate(10);
-        return view('info',['infos'=>$infos]);
+
+//        $startDate = session('startDate');
+//        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+//        Redis::flushall();
+//        while($startDate != $endDate)
+//        {
+//            $infos = Info::where('date','>=',session('startDate'))
+//                            ->where('date','<=',session('endDate'))
+//                            ->where($array)->paginate(10);
+//            foreach($infos as $i => $info)
+//            {
+//                Redis::set($info->bianhao.'.'.$info->date,$info->renshu);
+//            }
+//            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+//        }
+
+        $startDate = session('startDate');
+        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+        return view('info',['infos'=>$infos,'startDate'=>$startDate,'endDate'=>$endDate]);
     }
     
     public function logout()
@@ -105,17 +130,29 @@ class InfoController extends Controller
     {
         try
         {
+            $array = array();
+            if(session('type')!='')
+                $array['type'] = session('type');
+            if(session('name')!='')
+                $array['name'] = session('name');
+            $infos = Info::where('date','>=',session('startDate'))
+                         ->where('date','<=',session('endDate'))
+                         ->where($array)->get();
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setCellValue('A1', '编号');
             $sheet->setCellValue('B1', '人数');
-            $sheet->setCellValue('C1', '日期');
-            $infos = Info::where('date',session('date'))->get();
+            $sheet->setCellValue('C1', '群名称');
+            $sheet->setCellValue('D1', '群人数');
+            $sheet->setCellValue('E1', '日期');
+
             foreach($infos as $i => $info)
             {
                 $sheet->setCellValue('A'.($i+2), $info->bianhao);
                 $sheet->setCellValue('B'.($i+2), $info->renshu);
-                $sheet->setCellValue('C'.($i+2), $info->date);
+                $sheet->setCellValue('C'.($i+2), $info->name);
+                $sheet->setCellValue('D'.($i+2), $info->amount);
+                $sheet->setCellValue('E'.($i+2), $info->date);
             }
             $writer = new Xlsx($spreadsheet);
             $filename = 'export/'.md5(time()).'.xlsx';
@@ -139,8 +176,20 @@ class InfoController extends Controller
         session()->put('startDate',$request->startDate);
         session()->put('endDate',$request->endDate);
         session()->save();
+        
         return response()->json(array(
             'code' => 200
                                 ));
+    }
+    
+    public function setType()
+    {
+        set_time_limit(0);
+        $infos = Info::where('type',null)->get();
+        foreach($infos as $info)
+        {
+            $info->type = $type = substr($info->bianhao,0,1);
+            $info->save();
+        }
     }
 }

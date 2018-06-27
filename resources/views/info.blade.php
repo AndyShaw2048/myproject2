@@ -62,8 +62,11 @@
                 <thead>
                 <tr>
                     <th>编号</th>
-                    <th>人数</th>
-                    <th>时间</th>
+                    @while($startDate != $endDate)
+                        <th>人数({{$startDate}})</th>
+                        {{--<th>时间({{$startDate}})</th>--}}
+                    <?php $startDate = date("Y-m-d",strtotime($startDate." +1 day"));?>
+                    @endwhile
                 </tr>
                 </thead>
                 <tbody>
@@ -100,11 +103,24 @@
             var myDate = new Date();
             var date = myDate.getFullYear()+'-'+myDate.getMonth()+'-'+myDate.getDate();
 
-            var startDate = new Date(myDate.getFullYear(),myDate.getMonth(),myDate.getDate());
-            var endDate = new Date(myDate.getFullYear(),myDate.getMonth(),myDate.getDate());
+            var DateOne = $('#my-startDate').text();
+            var OneMonth = DateOne.substring(5,DateOne.lastIndexOf ('-'));
+            var OneDay = DateOne.substring(DateOne.length,DateOne.lastIndexOf ('-')+1);
+            var OneYear = DateOne.substring(0,DateOne.indexOf ('-'));
+            var startDate = new Date(OneYear,OneMonth-1,OneDay);
+
+
+            var DateOne = $('#my-endDate').text();
+            var OneMonth = DateOne.substring(5,DateOne.lastIndexOf ('-'));
+            var OneDay = DateOne.substring(DateOne.length,DateOne.lastIndexOf ('-')+1);
+            var OneYear = DateOne.substring(0,DateOne.indexOf ('-'));
+            var endDate = new Date(OneYear,OneMonth-1,OneDay);
+
             var $alert = $('#my-alert');
             $('#my-start').datepicker().
             on('changeDate.datepicker.amui', function(event) {
+                console.log(event.date);
+                console.log(endDate);
                 if (event.date.valueOf() > endDate.valueOf()) {
                     $alert.find('p').text('开始日期应小于结束日期！').end().show();
                 } else {
