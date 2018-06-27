@@ -28,5 +28,3 @@ Route::get('logout','InfoController@logout');
 Route::get('info','InfoController@info');
 Route::post('info/export','InfoController@export');
 Route::post('info/set','InfoController@setCondition');
-
-Route::get('type','InfoController@setType');

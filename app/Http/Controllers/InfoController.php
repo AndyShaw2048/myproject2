@@ -180,15 +180,4 @@ class InfoController extends Controller
             'code' => 200
                                 ));
     }
-    
-    public function setType()
-    {
-        set_time_limit(0);
-        $infos = Info::where('type',null)->get();
-        foreach($infos as $info)
-        {
-            $info->type = $type = substr($info->bianhao,0,1);
-            $info->save();
-        }
-    }
 }
