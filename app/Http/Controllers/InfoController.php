@@ -104,10 +104,21 @@ class InfoController extends Controller
             $array = explode(',',session('type'));
             foreach($array as $i => $item)
             {
-                if($i == 0)
-                    $sql = '( type = \''.$item.'\' ';
+                if(strlen($item)==1)
+                {
+                    if($i == 0)
+                        $sql = '( type = \''.$item.'\' ';
+                    else
+                        $sql = $sql.' or type = \''.$item.'\' ';
+                }
                 else
-                    $sql = $sql.' or type = \''.$item.'\' ';
+                {
+                    if($i == 0)
+                        $sql = '( bianhao = \''.$item.'\' ';
+                    else
+                        $sql = $sql.' or bianhao = \''.$item.'\' ';
+                }
+
             }
             $sql = $sql.')';
         }
@@ -165,10 +176,21 @@ class InfoController extends Controller
                 $array = explode(',',session('type'));
                 foreach($array as $i => $item)
                 {
-                    if($i == 0)
-                        $sql = '( type = \''.$item.'\' ';
+                    if(strlen($item)==1)
+                    {
+                        if($i == 0)
+                            $sql = '( type = \''.$item.'\' ';
+                        else
+                            $sql = $sql.' or type = \''.$item.'\' ';
+                    }
                     else
-                        $sql = $sql.' or type = \''.$item.'\' ';
+                    {
+                        if($i == 0)
+                            $sql = '( bianhao = \''.$item.'\' ';
+                        else
+                            $sql = $sql.' or bianhao = \''.$item.'\' ';
+                    }
+
                 }
                 $sql = $sql.')';
             }

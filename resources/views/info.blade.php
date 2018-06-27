@@ -29,22 +29,23 @@
             <div class="am-alert am-alert-danger" id="my-alert" style="display: none">
                 <p>开始日期应小于结束日期！</p>
             </div>
-            <div class="layui-form" action="" style="float: left;margin-right: 20px">
+            <div class="layui-form" action="" style="float:left;margin-right: 20px">
                 <div class="layui-inline">
-                    <label class="layui-form-label">首字母</label>
+                    <label class="layui-form-label">编&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;号</label>
                     <div class="layui-input-inline" style="margin-left: 18px">
-                        <input type="text" id="type" placeholder="请输入 编号首字母" class="layui-input" value="{{session('type')=='' ? '':session('type')}}">
+                        <input type="text" id="type" placeholder="编号首字母 或 编号全名，中间使用,隔开" class="layui-input"
+                               style="width: 350px;" value="{{session('type')=='' ? '':session('type')}}" title="例：A,b,C 或 A152,b563,c58">
                     </div>
                 </div>
                 <br>
                 <div class="layui-inline">
-                    <label class="layui-form-label">群编号</label>
+                    <label class="layui-form-label">群&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;号</label>
                     <div class="layui-input-inline" style="margin-left: 18px">
-                        <input type="text" id="name" placeholder="请输入 群编号(纯数字)" class="layui-input" value="{{session('number')=='' ? '':session('number')}}">
+                        <input type="text" id="name" placeholder="群编号(纯数字)" class="layui-input" style="width: 350px;" value="{{session('number')=='' ? '':session('number')}}">
                     </div>
                 </div>
             </div>
-            <div class="am-g">
+            <div class="am-g" style="">
                 <div>
                     <button type="button" class="am-btn am-btn-default am-margin-right" id="my-start">开始日期</button>
                     <span id="my-startDate">{{session('startDate')}}</span>
