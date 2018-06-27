@@ -71,6 +71,9 @@
                 </tr>
                 </thead>
                 <tbody>
+                @if($infos->isEmpty())
+                    <td colspan="13">暂无数据</td>
+                @else
                 @foreach($infos as $info)
                     <?php
                     $startDate = session('startDate');
@@ -85,6 +88,7 @@
                         @endfor
                     </tr>
                 @endforeach
+                @endif
                 </tbody>
             </table>
         </div>
