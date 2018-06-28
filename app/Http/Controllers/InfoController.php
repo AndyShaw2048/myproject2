@@ -299,7 +299,7 @@ class InfoController extends Controller
                         }
                         else
                         {
-                            Info::where('number',$item)->where('date',$startDate)
+                            Info::where('bianhao',$item)->where('date',$startDate)
                                 ->chunk(500,function($infos){
                                     foreach($infos as $info)
                                     {
