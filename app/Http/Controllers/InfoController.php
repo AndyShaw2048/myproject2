@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Password;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -106,14 +107,14 @@ class InfoController extends Controller
         Redis::flushall();
         for(;$startDate < $endDate;)
         {
-            $infos = DB::table('info')->whereRaw($sql)->orderBy('type')->paginate(10);
+            $infos = DB::table('info')->whereRaw($sql)->paginate(10);
             foreach($infos as $i => $info)
             {
                 Redis::set($info->bianhao.':'.$info->date,$info->renshu);
             }
             $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
         }
-        $infos = $infos = DB::table('info')->whereRaw($sql)->orderBy('type')->groupBy('bianhao')->paginate(10);
+        $infos = $infos = DB::table('info')->whereRaw($sql)->groupBy('bianhao')->paginate(10);
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         return view('info',['infos'=>$infos,'startDate'=>$startDate,'endDate'=>$endDate]);
@@ -125,6 +126,10 @@ class InfoController extends Controller
         return redirect('login');
     }
 
+    /**
+     * 详情导出
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|string
+     */
     public function export()
     {
         try
@@ -251,4 +256,143 @@ class InfoController extends Controller
 
         return $sql;
     }
+
+    /**
+     * 获取总人数页面
+     *
+     */
+    protected $amount = 0;
+    public function getNumber()
+    {
+        if(!session()->exists('isLogin'))
+        {
+            return redirect('login');
+        }
+
+        $types[] = explode(",",session('type'));
+        $types[] = explode(",",session('number'));
+        session()->put('array',$types);
+        session()->save();
+
+        $startDate = session('startDate');
+        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+        Redis::flushall();
+        for(;$startDate < $endDate;)
+        {
+            foreach($types as $i => $type)
+            {
+                if($i == 0)
+                {
+                    foreach($type as $i => $item)
+                    {
+                        if(strlen($item) == 1)
+                        {
+                            Info::where('type',$item)->where('date',$startDate)
+                                 ->chunk(500,function($infos){
+                                     foreach($infos as $info)
+                                     {
+                                         $this->amount = $this->amount + $info->renshu;
+                                     }
+                                 });
+                            Redis::set($item.':'.$startDate,$this->amount);
+                            $this->amount = 0;
+                        }
+                        else
+                        {
+                            Info::where('number',$item)->where('date',$startDate)
+                                ->chunk(500,function($infos){
+                                    foreach($infos as $info)
+                                    {
+                                        $this->amount = $this->amount + $info->renshu;
+                                    }
+                                });
+                            Redis::set($item.':'.$startDate,$this->amount);
+                            $this->amount = 0;
+                        }
+                    }
+                }
+                else
+                {
+                    if(isset($type[0]))
+                    {
+                        foreach($type as $i => $item)
+                        {
+                            Info::where('number',$item)->where('date',$startDate)
+                                ->chunk(500,function($infos){
+                                    foreach($infos as $info)
+                                    {
+                                        $this->amount = $this->amount + $info->amount;
+                                    }
+                                });
+                            Redis::set($item.':'.$startDate,$this->amount);
+                            $this->amount = 0;
+                        }
+                    }
+                }
+            }
+            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+        }
+
+        $startDate = session('startDate');
+        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+        return view('amount',['types'=>$types,'startDate'=>$startDate,'endDate'=>$endDate]);
+    }
+
+    /**
+     * 总人数导出
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|string
+     */
+    public function amountExport()
+    {
+        $startDate = session('startDate');
+        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+        $types = session('array');
+        $ascii = '66';
+        try
+        {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setCellValue('A1', '选项');
+            for(;$startDate < $endDate;)
+            {
+                $sheet->setCellValue(chr($ascii).'1', $startDate);
+                $ascii++;
+                $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+            }
+
+            $startDate = session('startDate');
+            $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+            $ascii = '66';
+            $i = 0;
+            foreach($types as $type)
+            {
+                if($type[0] != '')
+                {
+                    foreach($type as  $item)
+                    {
+                        $sheet->setCellValue('A'.($i+2),$item);
+                        while($startDate < $endDate)
+                        {
+                            $sheet->setCellValue(chr($ascii).($i+2),Redis::get($item.':'.$startDate));
+                            $ascii++;
+                            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+                        }
+                        $ascii = '66';
+                        $i++;
+                        $startDate = session('startDate');
+                        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+                    }
+                }
+            }
+            $writer = new Xlsx($spreadsheet);
+            $filename = 'export/'.md5(time()).'.xlsx';
+            $writer->save($filename);
+        }
+        catch(\Exception $e)
+        {
+            return '导出失败'.$e->getMessage();
+        }
+        return redirect(url($filename));
+    }
+
 }

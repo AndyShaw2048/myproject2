@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="{{ app()->getLocale() }}">
     <head>
@@ -58,14 +59,13 @@
         </div>
         <button class="am-btn am-btn-primary" style="margin-left: 10px" onclick="sendPost()">提交</button>
         <a href="/logout" class="am-btn am-btn-primary" style="margin-left: 10px">退出</a>
-        <a href="/amount" class="am-btn am-btn-default" style="margin-left: 10px" >计算当前全体人数</a>
+        <a href="/info" class="am-btn am-btn-default" style="margin-left: 10px">查看当前详细信息</a>
 
         <div class="am-scrollable-horizontal" style="margin-top: 20px">
             <table class="am-table am-table-bordered am-table-striped am-table-hover am-text-nowrap">
                 <thead>
                 <tr>
-                    <th>编号</th>
-                    <th>群名称</th>
+                    <th>选项</th>
                     @while($startDate != $endDate)
                         <th>人数({{$startDate}})</th>
                         {{--<th>时间({{$startDate}})</th>--}}
@@ -74,35 +74,35 @@
                 </tr>
                 </thead>
                 <tbody>
-                @if($infos->isEmpty())
+                @if(!(isset($types[0][0]) && isset($types[1][0])))
                     <td colspan="13">暂无数据</td>
                 @else
-                @foreach($infos as $info)
+                @foreach($types as $type)
+                    @foreach($type as $item)
+                        @if($item != '')
                     <?php
                     $startDate = session('startDate');
                     $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
                     ?>
                     <tr>
-                        <td>{{$info->bianhao}}</td>
-                        <td>{{$info->name}}</td>
+                        <td>{{$item}}</td>
                         @for(;$startDate < $endDate;)
-                            <td>{{\Illuminate\Support\Facades\Redis::get($info->bianhao.':'.$startDate)}}</td>
+                            <td>{{\Illuminate\Support\Facades\Redis::get($item.':'.$startDate)}}</td>
                             <?php $startDate = date("Y-m-d",strtotime($startDate." +1 day"));?>
                         @endfor
                     </tr>
+                        @endif
+                    @endforeach
                 @endforeach
                 @endif
                 </tbody>
             </table>
         </div>
         <div class="export">
-            <form action="/info/export" method="post">
+            <form action="/amount/export" method="post">
                 @csrf
             <button type="submit" class="am-btn am-btn-primary">导出当前日期记录</button>
             </form>
-        </div>
-        <div class="page">
-            {{$infos->links()}}
         </div>
     </div>
 
@@ -207,7 +207,7 @@
                 success: function(data){
                     console.log(data);
                     if (data.code == 200){
-                        window.setTimeout("window.location='/info'",0);
+                        window.setTimeout("window.location='/amount'",0);
                     }
                     else{
                         $.message({

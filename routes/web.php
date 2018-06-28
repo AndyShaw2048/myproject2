@@ -29,3 +29,6 @@ Route::get('info','InfoController@info');
 Route::post('info/export','InfoController@export');
 Route::post('info/set','InfoController@setCondition');
 Route::post('info/amount','InfoController@getAmount');
+
+Route::get('amount','InfoController@getNumber');
+Route::post('amount/export','InfoController@amountExport');
