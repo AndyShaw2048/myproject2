@@ -107,7 +107,7 @@ class InfoController extends Controller
         Redis::flushall();
         for(;$startDate < $endDate;)
         {
-            $infos = DB::table('info')->whereRaw($sql)->where('date',$startDate)->groupBy('bianhao')->paginate(10);
+            $infos = DB::table('info')->whereRaw($sql)->where('date',$startDate)->groupBy('bianhao')->get();
             foreach($infos as $i => $info)
             {
                 Redis::set($info->bianhao.':'.$info->date,$info->renshu);
