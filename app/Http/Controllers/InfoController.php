@@ -107,14 +107,14 @@ class InfoController extends Controller
         Redis::flushall();
         for(;$startDate < $endDate;)
         {
-            $infos = DB::table('info')->whereRaw($sql)->groupBy('bianhao')->paginate(10);
+            $infos = DB::table('info')->whereRaw($sql)->where('date',$startDate)->groupBy('bianhao')->paginate(10);
             foreach($infos as $i => $info)
             {
                 Redis::set($info->bianhao.':'.$info->date,$info->renshu);
             }
             $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
         }
-        $infos = $infos = DB::table('info')->whereRaw($sql)->groupBy('bianhao')->paginate(10);
+        $infos = DB::table('info')->whereRaw($sql)->groupBy('bianhao')->paginate(10);
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         return view('info',['infos'=>$infos,'startDate'=>$startDate,'endDate'=>$endDate]);
