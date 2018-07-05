@@ -85,6 +85,7 @@ class InfoController extends Controller
             session()->put('name','');
             session()->put('startDate',date('Y-m-d',time()));
             session()->put('endDate',date('Y-m-d',time()));
+            session()->put('changeType',0);
             session()->save();
             return redirect('info');
         }
@@ -111,6 +112,7 @@ class InfoController extends Controller
             foreach($infos as $i => $info)
             {
                 Redis::set($info->bianhao.':'.$info->date,$info->renshu);
+                Redis::set($info->bianhao.':'.$info->date.':number',$info->number);
             }
             $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
         }
@@ -262,6 +264,7 @@ class InfoController extends Controller
      *
      */
     protected $amount = 0;
+    protected $count = 0;
     public function getNumber()
     {
         if(!session()->exists('isLogin'))
@@ -291,11 +294,14 @@ class InfoController extends Controller
                                  ->chunk(500,function($infos){
                                      foreach($infos as $info)
                                      {
+                                         $this->count++;
                                          $this->amount = $this->amount + $info->renshu;
                                      }
                                  });
                             Redis::set($item.':'.$startDate,$this->amount);
+                            Redis::set($item.':'.$startDate.':count',$this->count);
                             $this->amount = 0;
+                            $this->count = 0;
                         }
                         else
                         {
@@ -321,11 +327,14 @@ class InfoController extends Controller
                                 ->chunk(500,function($infos){
                                     foreach($infos as $info)
                                     {
+                                        $this->count++;
                                         $this->amount = $this->amount + $info->amount;
                                     }
                                 });
                             Redis::set($item.':'.$startDate,$this->amount);
+                            Redis::set($item.':'.$startDate.':count',$this->count);
                             $this->amount = 0;
+                            $this->count = 0;
                         }
                     }
                 }
@@ -344,6 +353,66 @@ class InfoController extends Controller
      */
     public function amountExport()
     {
+        $startDate = session('startDate');
+        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+        $types = session('array');
+        $ascii = '66';
+        try
+        {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setCellValue('A1', '选项');
+            for(;$startDate < $endDate;)
+            {
+                $sheet->setCellValue(chr($ascii).'1', $startDate);
+                $ascii++;
+                $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+            }
+
+            $startDate = session('startDate');
+            $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+            $ascii = '66';
+            $i = 0;
+            foreach($types as $type)
+            {
+                if($type[0] != '')
+                {
+                    foreach($type as  $item)
+                    {
+                        $sheet->setCellValue('A'.($i+2),$item);
+                        while($startDate < $endDate)
+                        {
+                            $sheet->setCellValue(chr($ascii).($i+2),Redis::get($item.':'.$startDate));
+                            $ascii++;
+                            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+                        }
+                        $ascii = '66';
+                        $i++;
+                        $startDate = session('startDate');
+                        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+                    }
+                }
+            }
+            $writer = new Xlsx($spreadsheet);
+            $filename = 'export/'.md5(time()).'.xlsx';
+            $writer->save($filename);
+        }
+        catch(\Exception $e)
+        {
+            return '导出失败'.$e->getMessage();
+        }
+        return redirect(url($filename));
+    }
+
+    /**
+     * 群人数导出
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|string
+     */
+    public function exportGroup()
+    {
+        $numbers= DB::table('info')->select('number')->distinct()
+                    ->where('date','>=',session('startDate'))
+                    ->where('date','<=',session('endDate'))->get();
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         $types = session('array');

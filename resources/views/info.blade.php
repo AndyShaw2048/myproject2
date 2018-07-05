@@ -58,6 +58,7 @@
         </div>
         <button class="am-btn am-btn-primary" style="margin-left: 10px" onclick="sendPost()">提交</button>
         <a href="/logout" class="am-btn am-btn-primary" style="margin-left: 10px">退出</a>
+        <button class="am-btn am-btn-default" style="margin-left: 10px" onclick="changeType()" id="changeType_btn">查看群人数</button>
         <a href="/amount" class="am-btn am-btn-default" style="margin-left: 10px" >计算当前全体人数</a>
 
         <div class="am-scrollable-horizontal" style="margin-top: 20px">
@@ -65,7 +66,7 @@
                 <thead>
                 <tr>
                     <th>编号</th>
-                    <th>群名称</th>
+                    <th style="text-align: center">群名称</th>
                     @while($startDate != $endDate)
                         <th>人数({{$startDate}})</th>
                         {{--<th>时间({{$startDate}})</th>--}}
@@ -77,16 +78,32 @@
                 @if($infos->isEmpty())
                     <td colspan="13">暂无数据</td>
                 @else
+                    {{--好友数--}}
                 @foreach($infos as $info)
                     <?php
                     $startDate = session('startDate');
                     $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
                     ?>
                     <tr>
-                        <td>{{$info->bianhao}}</td>
-                        <td>{{$info->name}}</td>
+                        <td class="renshu">{{$info->bianhao}}</td>
+                        <td class="renshu">{{$info->name}}</td>
                         @for(;$startDate < $endDate;)
-                            <td>{{\Illuminate\Support\Facades\Redis::get($info->bianhao.':'.$startDate)}}</td>
+                            <td class="renshu">{{\Illuminate\Support\Facades\Redis::get($info->bianhao.':'.$startDate)}}</td>
+                            <?php $startDate = date("Y-m-d",strtotime($startDate." +1 day"));?>
+                        @endfor
+                    </tr>
+                @endforeach
+                    {{--群人数--}}
+                @foreach($infos as $info)
+                    <?php
+                    $startDate = session('startDate');
+                    $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+                    ?>
+                    <tr>
+                        <td class="number">{{$info->bianhao}}</td>
+                        <td class="number">{{$info->name}}</td>
+                        @for(;$startDate < $endDate;)
+                            <td class="number">{{\Illuminate\Support\Facades\Redis::get($info->bianhao.':'.$startDate.':number')}}</td>
                             <?php $startDate = date("Y-m-d",strtotime($startDate." +1 day"));?>
                         @endfor
                     </tr>
@@ -240,6 +257,54 @@
 
             var cha=((Date.parse(OneMonth+'/'+OneDay+'/'+OneYear)- Date.parse(TwoMonth+'/'+TwoDay+'/'+TwoYear))/86400000);
             return Math.abs(cha);
+        }
+
+
+        var t = '{{session('changeType')}}';
+        console.log(t);
+        if(t == 0)
+        {
+            $('.number').hide();
+            $('#changeType_btn').text('查看群人数');
+        }
+        else
+        {
+            $('.renshu').hide();
+            $('#changeType_btn').text('查看好友数');
+        }
+
+        /**
+         * 改变人数数据类别
+         */
+        function changeType(){
+            var type;
+            if($('#changeType_btn').text()=='查看群人数')
+                type = 1;
+            else
+                type = 0;
+            $.ajax({
+                type: 'POST',
+                url: 'info/changeType',
+                data: {type:type},
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
+                },
+                success: function(data){
+                    $('.renshu').toggle();
+                    $('.number').toggle();
+                    if($('#changeType_btn').text()=='查看群人数')
+                        $('#changeType_btn').text('查看好友数');
+                    else
+                        $('#changeType_btn').text('查看群人数');
+                },
+                error: function(xhr, type){
+                    alert('Ajax error!')
+                }
+            });
+
+
+
         }
     </script>
 </html>

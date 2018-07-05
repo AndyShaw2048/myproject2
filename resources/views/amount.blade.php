@@ -87,7 +87,7 @@
                     <tr>
                         <td>{{$item}}</td>
                         @for(;$startDate < $endDate;)
-                            <td>{{\Illuminate\Support\Facades\Redis::get($item.':'.$startDate)}}</td>
+                            <td>{{\Illuminate\Support\Facades\Redis::get($item.':'.$startDate)}}/{{\Illuminate\Support\Facades\Redis::get($item.':'.$startDate.':count')}}</td>
                             <?php $startDate = date("Y-m-d",strtotime($startDate." +1 day"));?>
                         @endfor
                     </tr>
@@ -99,10 +99,14 @@
             </table>
         </div>
         <div class="export">
-            <form action="/amount/export" method="post">
+            <form action="/amount/export" method="post" style="display: inline;">
                 @csrf
             <button type="submit" class="am-btn am-btn-primary">导出当前日期记录</button>
             </form>
+            {{--<form action="/amount/exportGroup" method="post"  style="display: inline;">--}}
+                {{--@csrf--}}
+                {{--<button type="submit" class="am-btn am-btn-primary">导出群人数</button>--}}
+            {{--</form>--}}
         </div>
     </div>
 
