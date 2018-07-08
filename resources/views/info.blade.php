@@ -103,7 +103,7 @@
                         <td class="number">{{$info->bianhao}}</td>
                         <td class="number">{{$info->name}}</td>
                         @for(;$startDate < $endDate;)
-                            <td class="number">{{\Illuminate\Support\Facades\Redis::get($info->bianhao.':'.$startDate.':number')}}</td>
+                            <td class="number">{{\Illuminate\Support\Facades\Redis::get($info->bianhao.':'.$startDate.':amount')}}</td>
                             <?php $startDate = date("Y-m-d",strtotime($startDate." +1 day"));?>
                         @endfor
                     </tr>

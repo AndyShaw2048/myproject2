@@ -112,7 +112,7 @@ class InfoController extends Controller
             foreach($infos as $i => $info)
             {
                 Redis::set($info->bianhao.':'.$info->date,$info->renshu);
-                Redis::set($info->bianhao.':'.$info->date.':number',$info->number);
+                Redis::set($info->bianhao.':'.$info->date.':amount',$info->amount);
             }
             $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
         }
@@ -410,18 +410,18 @@ class InfoController extends Controller
      */
     public function exportGroup()
     {
-        $numbers= DB::table('info')->select('number')->distinct()
+        $numbers= Info::select('number')->distinct()
                     ->where('date','>=',session('startDate'))
                     ->where('date','<=',session('endDate'))->get();
+        dd($numbers);
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
-        $types = session('array');
         $ascii = '66';
         try
         {
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setCellValue('A1', '选项');
+            $sheet->setCellValue('A1', '群名称');
             for(;$startDate < $endDate;)
             {
                 $sheet->setCellValue(chr($ascii).'1', $startDate);
@@ -432,34 +432,35 @@ class InfoController extends Controller
             $startDate = session('startDate');
             $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
             $ascii = '66';
-            $i = 0;
-            foreach($types as $type)
+            foreach($numbers as $i => $number)
             {
-                if($type[0] != '')
+                while($startDate < $endDate)
                 {
-                    foreach($type as  $item)
-                    {
-                        $sheet->setCellValue('A'.($i+2),$item);
-                        while($startDate < $endDate)
-                        {
-                            $sheet->setCellValue(chr($ascii).($i+2),Redis::get($item.':'.$startDate));
-                            $ascii++;
-                            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
-                        }
-                        $ascii = '66';
-                        $i++;
-                        $startDate = session('startDate');
-                        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
-                    }
+                    $this->amount = 0;
+                    Info::where('date',$startDate)
+                                 ->where('number',$number->number)
+                                 ->chunk(500,function($infos){
+                                     foreach ($infos as $info) {
+                                         $this->amount = $this->amount + $info->amount;
+                                     }
+                                 });
+
+                    $sheet->setCellValue('A'.($i+2), '达人福利vip'.$number->number.'群');
+                    $sheet->setCellValue(chr($ascii).($i+2), $this->amount);
+                    $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+                    $ascii++;
                 }
+                $ascii = '66';
+                $startDate = session('startDate');
             }
+
             $writer = new Xlsx($spreadsheet);
             $filename = 'export/'.md5(time()).'.xlsx';
             $writer->save($filename);
         }
         catch(\Exception $e)
         {
-            return '导出失败'.$e->getMessage();
+            return '导出失败:'.$e->getMessage();
         }
         return redirect(url($filename));
     }
