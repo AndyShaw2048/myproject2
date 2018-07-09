@@ -410,10 +410,17 @@ class InfoController extends Controller
      */
     public function exportGroup()
     {
-        $numbers= Info::select('number')->distinct()
+        //将该日期中的数据放入小表中
+        $startDate = session('startDate');
+        $endDate = session('endDate');
+        DB::statement("TRUNCATE table_cache");
+        $sql = "insert into table_cache(id,name,amount,number,date) select id,name,amount,number,date from info where date>=\"$startDate\" and date<=\"$endDate\" and number is not null";
+        DB::statement($sql);
+
+        //选出不重复的number值
+        $numbers= DB::table('table_cache')->select('number')->distinct()
                     ->where('date','>=',session('startDate'))
-                    ->where('date','<=',session('endDate'))->get();
-        dd($numbers);
+                    ->where('date','<=',session('endDate'))->orderBy('number')->get();
         $startDate = session('startDate');
         $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         $ascii = '66';
@@ -436,17 +443,22 @@ class InfoController extends Controller
             {
                 while($startDate < $endDate)
                 {
-                    $this->amount = 0;
-                    Info::where('date',$startDate)
-                                 ->where('number',$number->number)
-                                 ->chunk(500,function($infos){
-                                     foreach ($infos as $info) {
-                                         $this->amount = $this->amount + $info->amount;
-                                     }
-                                 });
-
+                    /**
+                     *该处使用了存储过程
+                    DROP PROCEDURE IF EXISTS `proc_getamount`;
+                    DELIMITER ;;
+                    CREATE DEFINER=`root`@`localhost` PROCEDURE `proc_getamount`(IN a int, IN b VARCHAR(20), OUT result int)
+                    BEGIN
+                    select sum(amount) into result from table_cache where number=a and date=b;
+                    END
+                    ;;
+                    DELIMITER ;
+                     *
+                     */
+                    DB::statement("call proc_getamount($number->number,\"$startDate\",@amount)");
+                    $res = DB::selectOne('select @amount as amount');
                     $sheet->setCellValue('A'.($i+2), '达人福利vip'.$number->number.'群');
-                    $sheet->setCellValue(chr($ascii).($i+2), $this->amount);
+                    $sheet->setCellValue(chr($ascii).($i+2), $res->amount);
                     $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
                     $ascii++;
                 }
@@ -462,7 +474,11 @@ class InfoController extends Controller
         {
             return '导出失败:'.$e->getMessage();
         }
-        return redirect(url($filename));
+//        return redirect(url($filename));
+        return response()->json(array([
+            'code' => '200',
+            'file' => url($filename)
+                                      ]));
     }
 
 }

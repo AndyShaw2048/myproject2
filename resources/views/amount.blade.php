@@ -101,35 +101,21 @@
         <div class="export">
             <form action="/amount/export" method="post" style="display: inline;">
                 @csrf
-            <button type="submit" class="am-btn am-btn-primary">导出当前日期记录</button>
+            <button type="submit" data-am-popover="{content: '导出当前日期及筛选条件下的所有人数', trigger: 'hover focus'}" class="am-btn am-btn-primary">导出记录</button>
             </form>
-            {{--<form action="/amount/exportGroup" method="post"  style="display: inline;">--}}
-                {{--@csrf--}}
-                {{--<button type="submit" class="am-btn am-btn-primary">导出群人数</button>--}}
-            {{--</form>--}}
+            <a onclick="exportGroup()" data-am-popover="{content: '导出当前日期的所有群人数', trigger: 'hover focus'}" class="am-btn am-btn-primary">导出群人数</a>
         </div>
     </div>
 
     <div class="am-modal am-modal-loading am-modal-no-btn" tabindex="-1" id="my-modal-loading">
         <div class="am-modal-dialog">
-            <div class="am-modal-hd">正在载入...</div>
+            <div class="am-modal-hd">正在生成数据，请稍后...</div>
             <div class="am-modal-bd">
                 <span class="am-icon-spinner am-icon-spin"></span>
             </div>
         </div>
     </div>
 
-    <div class="am-modal am-modal-alert" tabindex="-1" id="my-alert-amount">
-        <div class="am-modal-dialog">
-            <div class="am-modal-bd" id="amount-text">
-                当前条件下，编号人数：<span id="b_number"></span>，群组人数：<span id="g_number"></span>
-                <br>总人数：<span id="total_number"></span>
-            </div>
-            <div class="am-modal-footer">
-                <span class="am-modal-btn">确定</span>
-            </div>
-        </div>
-    </div>
     </body>
 
     <script src="{{url('js/jquery-1.10.2.min.js')}}"></script>
@@ -245,5 +231,43 @@
             var cha=((Date.parse(OneMonth+'/'+OneDay+'/'+OneYear)- Date.parse(TwoMonth+'/'+TwoDay+'/'+TwoYear))/86400000);
             return Math.abs(cha);
         }
+
+
+/**
+ * 导出群人数
+ *
+ */
+function exportGroup()
+{
+    $('#my-modal-loading').modal();
+
+    $.ajax({
+        type: 'POST',
+        url: '/amount/exportGroup',
+        data: {confirm:1},
+        timeout:10000,
+        dataType: 'json',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
+        },
+        success: function(data){
+//            console.log(data[0].code);
+            if (data[0].code == 200){
+                window.location = data[0].file;
+            }
+            else{
+                $.message({
+                    message: '提交失败',
+                    type: 'error'
+                });
+            }
+            $('#my-modal-loading').modal('close');
+        },
+        error: function(xhr, type){
+            $('#my-modal-loading').modal('close');
+            alert('Ajax error!')
+        }
+    });
+}
     </script>
 </html>
