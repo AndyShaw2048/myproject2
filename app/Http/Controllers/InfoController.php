@@ -134,26 +134,63 @@ class InfoController extends Controller
      */
     public function export()
     {
+        Redis::flushall();
+        $startDate = session('startDate');
+        $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
         try
         {
             $sql = $this->getSql();
-            $infos = $infos = DB::table('info')->whereRaw($sql)->orderBy('type')->get();
+            DB::table('info')->whereRaw($sql)->orderBy('bianhao')->chunk(500,function($infos){
+                foreach($infos as $info){
+                    $startDate = session('startDate');
+                    $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
+                    if(session('changeType')==0)
+                    {
+                        while($startDate < $endDate)
+                        {
+                            Redis::set($info->bianhao.':'.$info->date,$info->renshu);
+                            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+                        }
+                    }
+                    else
+                    {
+                        while($startDate < $endDate)
+                        {
+                            Redis::set($info->bianhao.':'.$info->date,$info->amount);
+                            $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+                        }
+                    }
+                }
+            });
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setCellValue('A1', '编号');
-            $sheet->setCellValue('B1', '人数');
-            $sheet->setCellValue('C1', '群名称');
-            $sheet->setCellValue('D1', '群人数');
-            $sheet->setCellValue('E1', '日期');
+            $sheet->setCellValue('B1', '群名称');
+            $ascii = '67';
+            while($startDate < $endDate)
+            {
+                $sheet->setCellValue(chr($ascii).'1', $startDate);
+                $ascii++;
+                $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+            }
 
+            $ascii = '67';
+            $infos = DB::table('info')->whereRaw($sql)->groupBy('bianhao')->get();
             foreach($infos as $i => $info)
             {
+                $startDate = session('startDate');
+                $endDate = date("Y-m-d",strtotime(session('endDate').'+1 day'));
                 $sheet->setCellValue('A'.($i+2), $info->bianhao);
-                $sheet->setCellValue('B'.($i+2), $info->renshu);
-                $sheet->setCellValue('C'.($i+2), $info->number);
-                $sheet->setCellValue('D'.($i+2), $info->amount);
-                $sheet->setCellValue('E'.($i+2), $info->date);
+                $sheet->setCellValue('B'.($i+2), $info->name);
+                while($startDate < $endDate)
+                {
+                    $sheet->setCellValue(chr($ascii).($i+2), Redis::get($info->bianhao.':'.$startDate));
+                    $ascii++;
+                    $startDate = date("Y-m-d",strtotime($startDate." +1 day"));
+                }
+                $ascii='67';
             }
+
             $writer = new Xlsx($spreadsheet);
             $filename = 'export/'.md5(time()).'.xlsx';
             $writer->save($filename);
